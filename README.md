@@ -6,6 +6,8 @@
 
 A side-by-side reference for securing internal (self-hosted) versus external (vendor-hosted) MCP server deployments—with prioritized controls, architecture diagrams, validation questions, and a decision framework.
 
+*Last Updated: February 2026*
+
 ---
 
 ## Why This Exists
@@ -79,7 +81,7 @@ This guide answers all of that with an opinionated, prioritized framework. It's 
 
 ## Architecture Overview
 
-Before diving into specific security controls, it is essential to understand the fundamental architectural differences between internal and external MCP server deployments (as it stands today). The diagrams below illustrate the data flow, trust boundaries, and key security control points for each model.
+Before diving into specific security controls, it is essential to understand the fundamental architectural differences between internal and external MCP server deployments. The diagrams below illustrate the data flow, trust boundaries, and key security control points for each model.
 
 ### Why These Diagrams Matter
 
@@ -118,6 +120,8 @@ The concerns below are essential regardless of whether you run internal or exter
 | **P2** | Human-in-the-loop | Require approval for high-risk, irreversible or financial actions | Which actions can an agent take without human approval? |
 | **P2** | Data classification | Label and control data by sensitivity before it reaches MCP | Do you know what data sensitivity levels the MCP can access? |
 | **P2** | Tool minimization | Only enable tools necessary for the use case; treat each tool as a risk | Is there a tool enabled that isn't actively needed? |
+| **P2** | Agent orchestration | Secure agent-to-agent communication; validate delegated actions; prevent privilege escalation across agents | How do you secure communication between agents in multi-agent workflows? |
+| **P2** | Cost controls | Set budget limits, monitor token consumption, alert on runaway usage, implement circuit breakers | What stops a misbehaving agent from burning through your API budget? |
 | **P3** | Lifecycle governance | Catalog, risk-tier and manage MCP servers/connections through lifecycle | Do you have a single source of truth for all MCP connections? |
 | **P3** | Incident response | AI-specific playbooks for containment, evidence preservation and communication | Do you have an incident response playbook specifically for AI/agent incidents? |
 | **P3** | Red teaming | Test for prompt injection, data exfiltration, tool abuse, jailbreaks | When did you last red team your MCP integrations? |
@@ -130,8 +134,8 @@ The table below provides a detailed comparison of security controls for internal
 
 | Priority | Area | Internal MCP Server (Self-hosted) | External MCP Server (Vendor-hosted) |
 |----------|------|-----------------------------------|-------------------------------------|
-| **P1** | Scope and risk tier | Classify by data sensitivity, integration depth, agent capability (read-only → supervised → autonomous). Use 4-tier priority model. | Classify by what data you'll send and what actions the vendor can perform. Start restrictive, expand only with justification. |
-| **P1** | Network | No public IPs. Private subnets only. Access via VPN/ExpressRoute. Inbound only from gateway/bastion. | All traffic via controlled egress (API management/gateway). Allowlist vendor FQDNs. Use private link if available. |
+| **P1** | Scope and risk tier | Classify by data sensitivity, integration depth, agent capability (read-only -> supervised -> autonomous). Use 4-tier priority model. | Classify by what data you'll send and what actions the vendor can perform. Start restrictive, expand only with justification. |
+| **P1** | Network | No public IPs. Private subnets only. Access via VPN/ExpressRoute. Inbound only from gateway. | All traffic via controlled egress (API management/gateway). Allowlist vendor FQDNs. Use private link if available. |
 | **P1** | Identity and auth | Entra ID + OAuth 2.1. Validate JWT issuer/audience exactly. Short-lived tokens. Token binding for replay prevention. | Prefer your identity provider (Entra) over vendor accounts. Separate keys per environment. Verify vendor token handling. Confirm no sub-processor access. |
 | **P1** | Authorization | Enforce at gateway AND backend. Object-level authz. Map Entra claims to MCP roles (admin/owner/user/read-only). | Map internal roles to vendor permissions. Avoid broad admin scopes. Require approval workflows for high-risk actions. |
 | **P1** | Secrets and non-human identities | Unique service principal per MCP/agent. Managed identities preferred. Vault for secrets. Rotation + expiration alerts. | Keys only in vault, injected at gateway. Never expose keys to users/agents. Rotate keys on schedule and staff departure. |
@@ -143,10 +147,10 @@ The table below provides a detailed comparison of security controls for internal
 | **P2** | Supply chain | Assess model dependencies, libraries, base images. Monitor for vulnerabilities in tool integrations. | Map vendor's model providers and subprocessors. Understand inference location. Require notification of upstream changes. |
 | **P2** | Logging and monitoring | Full tracing with redaction. Log integrity (WORM). Oversight agents. Metrics. Correlation IDs. Alert on anomalies. | Log everything on your side. Ingest vendor signals. Correlation IDs. Behavioral baselines. Response integrity monitoring. |
 | **P2** | Availability/SLAs | Define RTO/RPO. Backup configs and indices. Geographic redundancy. Disaster recovery testing. | Negotiate SLAs (uptime, latency). Degradation plans. Failover options. Monitor vendor status. |
-| **P3** | Governance | Catalog MCP servers/agents. Risk tier → capabilities. Change management. Promotion gates (shadow → autonomous). | AI-flavored vendor risk assessment. SOC 2/ISO. Risk tier per vendor. Concentration risk. Financial health. |
+| **P3** | Governance | Catalog MCP servers/agents. Risk tier -> capabilities. Change management. Promotion gates (shadow -> autonomous). | AI-flavored vendor risk assessment. SOC 2/ISO. Risk tier per vendor. Concentration risk. Financial health. |
 | **P3** | Portability | Version control configs. Documented deployment. Reproducible infrastructure. | Assess lock-in API compatibility with alternatives. Abstraction layers. Migration runbooks. Data export. |
 | **P3** | Integrity verification | Request signing. Replay prevention. TLS everywhere, including internal. | Response authenticity. Cert pinning. Detect response modifications. Monitor for vendor-side injection. |
-| **P3** | Legal/compliance | Data security posture management (DSPM) for data residency. Regulatory mapping. Multicontrols if applicable. | Data processing agreement (DPA)/business associates' agreement (BAA). AI clauses (no training, intellectual property ownership). Cyber insurance. Liability terms. Regulatory fit. |
+| **P3** | Legal/compliance | Data security posture management (DSPM) for data residency. Regulatory mapping (including EU AI Act and emerging AI regulations). Multicontrols if applicable. | Data processing agreement (DPA)/business associates' agreement (BAA). AI clauses (no training, intellectual property ownership). Cyber insurance. Liability terms. Regulatory fit. |
 | **P3** | Testing and validation | Threat model. Red team. Config review. Continuous security testing in CI/CD. Resource exhaustion tests. | Sandbox with synthetic data. Red-team integration. Continuous evaluation. Canary deployments. A/B testing. Cross-tenant tests. |
 | **P4** | Multi-tenancy | Tenant isolation at MCP. Scoped indices. Per-tenant keys. Per-tenant rate limits and audit logs. | Verify vendor tenant isolation. Test for cross-tenant access. Contractual isolation guarantees. |
 
